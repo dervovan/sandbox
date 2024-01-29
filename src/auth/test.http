@@ -1,0 +1,10 @@
+###
+
+POST http://localhost:5000/auth/signin
+
+###
+
+GET http://localhost:5000/auth/signup
+
+###
+GET http://localhost:3333/auth/signup
