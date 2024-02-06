@@ -5,13 +5,16 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SignInDto, SignUpDto } from './dto';
 import * as argon from 'argon2';
-import { Role, User } from '@prisma/client';
 import strings from './strings.js';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable({})
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   async signup(
@@ -58,11 +61,13 @@ export class AuthService {
 
   async signin(
     dto: SignInDto,
-  ): Promise<{ login: string; role: Role }> {
+  ): Promise<{ access_token: string }> {
     const existedUser =
       await this.prismaService.user.findUnique({
         where: { login: dto.login },
         select: {
+          id: true,
+          email: true,
           passwordHash: true,
           login: true,
           role: true,
@@ -82,8 +87,30 @@ export class AuthService {
       throw new ForbiddenException(strings.notValidLogin);
     }
 
-    delete existedUser.passwordHash;
+    return {
+      access_token: await this.signToken(
+        existedUser.id,
+        existedUser.email,
+      ),
+    };
+  }
 
-    return existedUser;
+  signToken(
+    userId: number,
+    email: string,
+  ): Promise<string> {
+    const data = {
+      sub: userId,
+      email,
+    };
+
+    const secret = this.config.get('JWT_SECRET');
+
+    return this.jwt.signAsync(data, {
+      expiresIn: this.config.get(
+        'ACCESS_TOKEN_EXPIRE_TIME',
+      ),
+      secret: secret,
+    });
   }
 }
