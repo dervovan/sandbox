@@ -8,10 +8,26 @@ import * as argon from 'argon2';
 import strings from './strings.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Tokens } from './types';
+import { TokenData, Tokens, TokenType } from './types';
 
 @Injectable({})
 export class AuthService {
+  private readonly tokenData: Record<TokenType, TokenData> =
+    {
+      [TokenType.AccessToken]: {
+        secret: this.config.get('AT_JWT_SECRET'),
+        expires: this.config.get(
+          'ACCESS_TOKEN_EXPIRE_TIME',
+        ),
+      },
+      [TokenType.RefreshToken]: {
+        secret: this.config.get('RT_JWT_SECRET'),
+        expires: this.config.get(
+          'REFRESH_TOKEN_EXPIRE_TIME',
+        ),
+      },
+    };
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwt: JwtService,
@@ -59,6 +75,12 @@ export class AuthService {
       access_token: await this.signToken(
         user.id,
         user.email,
+        TokenType.AccessToken,
+      ),
+      refresh_token: await this.signToken(
+        user.id,
+        user.email,
+        TokenType.RefreshToken,
       ),
     };
   }
@@ -93,6 +115,12 @@ export class AuthService {
       access_token: await this.signToken(
         existedUser.id,
         existedUser.email,
+        TokenType.AccessToken,
+      ),
+      refresh_token: await this.signToken(
+        existedUser.id,
+        existedUser.email,
+        TokenType.RefreshToken,
       ),
     };
   }
@@ -102,19 +130,28 @@ export class AuthService {
   signToken(
     userId: number,
     email: string,
+    tokenType: TokenType,
   ): Promise<string> {
     const data = {
       sub: userId,
       email,
     };
 
-    const secret = this.config.get('JWT_SECRET');
-
     return this.jwt.signAsync(data, {
-      expiresIn: this.config.get(
-        'ACCESS_TOKEN_EXPIRE_TIME',
-      ),
-      secret: secret,
+      expiresIn: this.tokenData[tokenType].expires,
+      secret: this.tokenData[tokenType].secret,
     });
+  }
+
+  async updateRefreshToken(userId: number, rt: string) {
+    
+    const hash = await argon.hash(rt)
+    this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        refreshTokenHash: hash,
+        
+      }
+    })
   }
 }
