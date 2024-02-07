@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -13,6 +14,7 @@ import { User } from '@prisma/client';
 import { GetUser, Public } from './decorator';
 import { RtJwtGuard } from './guard';
 import { GetToken } from './decorator/getToken.decorator';
+import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -22,11 +24,15 @@ export class AuthController {
   @Post('signup')
   async signup(
     @Body() authBody: SignUpDto,
-  ): Promise<{ message: string; result: Tokens }> {
-    return {
-      message: 'authBody',
-      result: await this.authService.signup(authBody),
-    };
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<Tokens> {
+    const tokens = await this.authService.signup(authBody);
+    response.cookie('accessToken', tokens.access_token, {
+      expires: new Date(new Date().getTime() + 30 * 1000), // 30 days
+      sameSite: 'strict',
+      httpOnly: true,
+    });
+    return tokens;
   }
 
   @Public()
