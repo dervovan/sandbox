@@ -10,6 +10,8 @@ import strings from './strings.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { TokenData, Tokens, TokenType } from './types';
+import { MailService } from 'src/mail/mail.service';
+import * as uuid from 'uuid';
 
 @Injectable({})
 export class AuthService {
@@ -33,32 +35,13 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
-  async signup(dto: SignUpDto): Promise<Tokens> {
+  private async _signupLogic(
+    dto: SignUpDto,
+  ): Promise<Tokens> {
     const hash = await argon.hash(dto.password);
-
-    const existsLogin =
-      await this.prismaService.user.findUnique({
-        where: { login: dto.login },
-      });
-
-    if (existsLogin !== null) {
-      throw new ForbiddenException(
-        strings.loginAlreadyExists,
-      );
-    }
-
-    const existsEmail =
-      await this.prismaService.user.findUnique({
-        where: { email: dto.email },
-      });
-
-    if (existsEmail !== null) {
-      throw new ForbiddenException(
-        strings.emailAlreadyInUse,
-      );
-    }
 
     const user = await this.prismaService.user.create({
       data: {
@@ -81,7 +64,39 @@ export class AuthService {
       user.id,
       tokens.refresh_token,
     );
+
     return tokens;
+  }
+
+  async signup(dto: SignUpDto): Promise<Tokens> {
+    const existsLogin =
+      await this.prismaService.user.findUnique({
+        where: { login: dto.login },
+      });
+
+    if (existsLogin !== null) {
+      throw new ForbiddenException(
+        strings.loginAlreadyExists,
+      );
+    }
+
+    const existsEmail =
+      await this.prismaService.user.findUnique({
+        where: { email: dto.email },
+      });
+
+    if (existsEmail !== null) {
+      throw new ForbiddenException(
+        strings.emailAlreadyInUse,
+      );
+    }
+
+    const activationKey = uuid.v4();
+    this.mail.sendActivationMail(
+      dto.email,
+      `${this.config.get('SITE_URL')}/activate/${activationKey}`,
+    );
+    return this._signupLogic(dto);
   }
 
   async signin(dto: SignInDto): Promise<Tokens> {
@@ -124,6 +139,26 @@ export class AuthService {
 
   async logout(userId: number): Promise<void> {
     await this.updateRefreshToken(userId, '');
+  }
+
+  async activate(activationKey: string): Promise<void> {
+    const user = await this.prismaService.user.findFirst({
+      where: { activationKey },
+    });
+
+    if (!user) {
+      throw new ForbiddenException(
+        strings.invalidActivationKey,
+      );
+    }
+
+    await this.prismaService.user.update({
+      where: { id: user.id },
+      data: {
+        isActivated: true,
+        activationKey: null,
+      },
+    });
   }
 
   async refreshTokens(

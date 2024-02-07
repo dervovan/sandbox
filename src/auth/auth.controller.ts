@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Res,
   UseGuards,
@@ -28,7 +29,7 @@ export class AuthController {
   ): Promise<Tokens> {
     const tokens = await this.authService.signup(authBody);
     response.cookie('accessToken', tokens.access_token, {
-      expires: new Date(new Date().getTime() + 30 * 1000), // 30 days
+      expires: new Date(new Date().getTime() + 10 * 60 * 1000), // 10 min
       sameSite: 'strict',
       httpOnly: true,
     });
@@ -46,6 +47,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@GetUser() user: User) {
     return this.authService.logout(user.id);
+  }
+
+  @Public()
+  @Post('activate/:activationKey')
+  @HttpCode(HttpStatus.OK)
+  async activate(@Param('activationKey') activationKey: string) {
+    return this.authService.activate(activationKey);
   }
 
   @Public()

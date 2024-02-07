@@ -20,6 +20,8 @@ model User {
   firstName        String?
   lastName         String?
   role             Role     @default(USER)
+  isActivated      Boolean  @default(false)
+  activationKey    String?
   refreshTokenHash String?
 }
 

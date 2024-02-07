@@ -1,4 +1,5 @@
 const strings = {
+  invalidActivationKey: 'Неверный ключ активации',
   accessDenied: 'Действие запрещено',
   notValidLogin: 'Неверный логин или пароль',
   loginAlreadyExists:
