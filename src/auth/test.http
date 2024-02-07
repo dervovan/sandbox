@@ -15,10 +15,10 @@ POST  http://localhost:3333/auth/signup
 content-type: application/json
 
 {
-    "email": "qwe@qwe.qwerty",
+    "email": "qwe2@qwe.qwerty",
     "password": "qwerty",
     "passwordConfirm": "qwerty",
-    "login": "qwerty"
+    "login": "qwerty2"
 }
 
 ###
@@ -29,3 +29,11 @@ content-type: application/json
     "password": "qwerty",
     "login": "qwerty"
 }
+
+###
+POST  http://localhost:3333/auth/logout
+Authorization:  Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoicXdlQHF3ZS5xd2VydHkiLCJpYXQiOjE3MDcyNDUwMDYsImV4cCI6MTcwNzI0NTA2Nn0.bSi-WfetteZPVUHnAfWEI41wdcD7biTtoq6_VgTY4xk
+
+###
+POST  http://localhost:3333/auth/refresh
+Authorization:  Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoicXdlQHF3ZS5xd2VydHkiLCJpYXQiOjE3MDcyNDQ5NTksImV4cCI6MTcwNzg0OTc1OX0.LeCkdHxJw78ruJT6iTwI-4NVhDhshEBCBji3ethVFe0

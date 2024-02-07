@@ -1,4 +1,5 @@
 const strings = {
+  accessDenied: 'Действие запрещено',
   notValidLogin: 'Неверный логин или пароль',
   loginAlreadyExists:
     'Пользователь с таким именем уже существует',

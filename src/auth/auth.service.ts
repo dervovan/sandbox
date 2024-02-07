@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SignInDto, SignUpDto } from './dto';
@@ -71,18 +72,16 @@ export class AuthService {
       },
     });
 
-    return {
-      access_token: await this.signToken(
-        user.id,
-        user.email,
-        TokenType.AccessToken,
-      ),
-      refresh_token: await this.signToken(
-        user.id,
-        user.email,
-        TokenType.RefreshToken,
-      ),
-    };
+    const tokens = await this.getTokens(
+      user.id,
+      user.email,
+    );
+
+    await this.updateRefreshToken(
+      user.id,
+      tokens.refresh_token,
+    );
+    return tokens;
   }
 
   async signin(dto: SignInDto): Promise<Tokens> {
@@ -111,21 +110,67 @@ export class AuthService {
       throw new ForbiddenException(strings.notValidLogin);
     }
 
-    return {
-      access_token: await this.signToken(
-        existedUser.id,
-        existedUser.email,
-        TokenType.AccessToken,
-      ),
-      refresh_token: await this.signToken(
-        existedUser.id,
-        existedUser.email,
-        TokenType.RefreshToken,
-      ),
-    };
+    const tokens = await this.getTokens(
+      existedUser.id,
+      existedUser.email,
+    );
+
+    await this.updateRefreshToken(
+      existedUser.id,
+      tokens.refresh_token,
+    );
+    return tokens;
   }
 
-  async logout() {}
+  async logout(userId: number): Promise<void> {
+    await this.updateRefreshToken(userId, '');
+  }
+
+  async refreshTokens(
+    userId: number,
+    rtToken: string,
+  ): Promise<Tokens> {
+    const existedUser =
+      await this.prismaService.user.findFirst({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          login: true,
+          role: true,
+          refreshTokenHash: true,
+        },
+      });
+
+    if (
+      !existedUser ||
+      rtToken === '' ||
+      existedUser.refreshTokenHash === ''
+    ) {
+      throw new ForbiddenException(strings.accessDenied);
+    }
+
+    const tokenMatches = await argon.verify(
+      existedUser.refreshTokenHash,
+      rtToken,
+    );
+
+    if (!tokenMatches) {
+      throw new UnauthorizedException();
+    }
+
+    const tokens = await this.getTokens(
+      existedUser.id,
+      existedUser.email,
+    );
+
+    await this.updateRefreshToken(
+      existedUser.id,
+      tokens.refresh_token,
+    );
+
+    return tokens;
+  }
 
   signToken(
     userId: number,
@@ -144,14 +189,30 @@ export class AuthService {
   }
 
   async updateRefreshToken(userId: number, rt: string) {
-    
-    const hash = await argon.hash(rt)
-    this.prismaService.user.update({
+    const hash = rt ? await argon.hash(rt) : rt;
+    await this.prismaService.user.update({
       where: { id: userId },
       data: {
         refreshTokenHash: hash,
-        
-      }
-    })
+      },
+    });
+  }
+
+  async getTokens(
+    userId: number,
+    email: string,
+  ): Promise<Tokens> {
+    return {
+      access_token: await this.signToken(
+        userId,
+        email,
+        TokenType.AccessToken,
+      ),
+      refresh_token: await this.signToken(
+        userId,
+        email,
+        TokenType.RefreshToken,
+      ),
+    };
   }
 }
