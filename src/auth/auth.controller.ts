@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -50,10 +51,13 @@ export class AuthController {
   }
 
   @Public()
-  @Post('activate/:activationKey')
+  @Get('activate/:activationKey')
   @HttpCode(HttpStatus.OK)
   async activate(@Param('activationKey') activationKey: string) {
-    return this.authService.activate(activationKey);
+    await this.authService.activate(activationKey);
+    return {
+      message: 'activated'
+    }
   }
 
   @Public()
