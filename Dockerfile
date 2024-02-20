@@ -10,4 +10,6 @@ COPY package-lock.json .
 RUN npm ci
 COPY . .
 RUN npx prisma generate
-CMD ["npm", "run", "start"]
+RUN npm run build
+# CMD ["npm", "run", "start"]
+CMD [  "npm", "run", "start:migrate:prod" ]
