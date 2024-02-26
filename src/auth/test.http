@@ -18,7 +18,6 @@ content-type: application/json
     "email": "dervovan@gmail.com",
     "password": "qwerty",
     "passwordConfirm": "qwerty",
-    "login": "dervovan"
 }
 
 ###
@@ -27,7 +26,7 @@ content-type: application/json
 
 {
     "password": "qwerty",
-    "login": "qwerty"
+    "email": "dervovan@gmail.com"
 }
 
 ###

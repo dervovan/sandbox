@@ -49,7 +49,6 @@ export class AuthService {
     );
     const user = await this.prismaService.user.create({
       data: {
-        login: dto.login,
         email: dto.email,
         passwordHash: hash,
         activationKey: activationKey,
@@ -74,17 +73,6 @@ export class AuthService {
   }
 
   async signup(dto: SignUpDto): Promise<Tokens> {
-    const existsLogin =
-      await this.prismaService.user.findUnique({
-        where: { login: dto.login },
-      });
-
-    if (existsLogin !== null) {
-      throw new ForbiddenException(
-        strings.loginAlreadyExists,
-      );
-    }
-
     const existsEmail =
       await this.prismaService.user.findUnique({
         where: { email: dto.email },
@@ -102,12 +90,11 @@ export class AuthService {
   async signin(dto: SignInDto): Promise<Tokens> {
     const existedUser =
       await this.prismaService.user.findUnique({
-        where: { login: dto.login },
+        where: { email: dto.email },
         select: {
           id: true,
           email: true,
           passwordHash: true,
-          login: true,
           role: true,
         },
       });
@@ -171,7 +158,6 @@ export class AuthService {
         select: {
           id: true,
           email: true,
-          login: true,
           role: true,
           refreshTokenHash: true,
         },

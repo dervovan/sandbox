@@ -29,8 +29,13 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<Tokens> {
     const tokens = await this.authService.signup(authBody);
-    response.cookie('accessToken', tokens.access_token, {
-      expires: new Date(new Date().getTime() + 10 * 60 * 1000), // 10 min
+    // response.cookie('accessToken', tokens.access_token, {
+    //   expires: new Date(new Date().getTime() + 10 * 60 * 1000), // 10 min
+    //   sameSite: 'strict',
+    //   httpOnly: true,
+    // });
+    response.cookie('refreshToken', tokens.access_token, {
+      expires: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days
       sameSite: 'strict',
       httpOnly: true,
     });

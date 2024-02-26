@@ -30,7 +30,6 @@ export class RtJwtStrategy extends PassportStrategy(
       select: {
         id: true,
         email: true,
-        login: true,
         role: true,
       },
     });
