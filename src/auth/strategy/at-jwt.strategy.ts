@@ -27,6 +27,8 @@ export class AtJwtStrategy extends PassportStrategy(
         id: true,
         email: true,
         role: true,
+        firstName: true,
+        lastName: true,
       },
     });
   }

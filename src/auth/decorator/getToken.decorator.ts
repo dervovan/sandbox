@@ -4,11 +4,12 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 
-export const GetToken = createParamDecorator(
+export const GetRefreshToken = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request: Request = ctx
       .switchToHttp()
       .getRequest();
-    return request.get('authorization').replace('Bearer', '').trim();
+
+      return request?.cookies?.refreshToken;
   },
 );

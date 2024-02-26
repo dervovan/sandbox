@@ -15,12 +15,16 @@ import { Tokens } from './types';
 import { User } from '@prisma/client';
 import { GetUser, Public } from './decorator';
 import { RtJwtGuard } from './guard';
-import { GetToken } from './decorator/getToken.decorator';
+import { GetRefreshToken } from './decorator/getToken.decorator';
 import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Public()
   @Post('signup')
@@ -28,25 +32,53 @@ export class AuthController {
     @Body() authBody: SignUpDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Tokens> {
-    const tokens = await this.authService.signup(authBody);
-    // response.cookie('accessToken', tokens.access_token, {
-    //   expires: new Date(new Date().getTime() + 10 * 60 * 1000), // 10 min
-    //   sameSite: 'strict',
-    //   httpOnly: true,
-    // });
-    response.cookie('refreshToken', tokens.access_token, {
-      expires: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      sameSite: 'strict',
-      httpOnly: true,
-    });
-    return tokens;
+    const authData =
+      await this.authService.signup(authBody);
+    response.cookie(
+      'refreshToken',
+      authData.refresh_token,
+      {
+        expires: new Date(
+          new Date().getTime() +
+            parseInt(
+              this.config.get(
+                'REFRESH_TOKEN_EXPIRE_TIME_MILLISECOND',
+              ),
+            ),
+        ),
+        sameSite: 'strict',
+        httpOnly: true,
+      },
+    );
+    return authData;
   }
 
   @Public()
   @Post('signin')
   @HttpCode(HttpStatus.OK)
-  async signin(@Body() authBody: SignInDto) {
-    return this.authService.signin(authBody);
+  async signin(
+    @Body() authBody: SignInDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const authData =
+      await this.authService.signin(authBody);
+    response.cookie(
+      'refreshToken',
+      authData.refresh_token,
+      {
+        expires: new Date(
+          new Date().getTime() +
+            parseInt(
+              this.config.get(
+                'REFRESH_TOKEN_EXPIRE_TIME_MILLISECOND',
+              ),
+            ),
+        ),
+        sameSite: 'strict',
+        httpOnly: true,
+      },
+    );
+    return authData;
   }
 
   @Post('logout')
@@ -58,11 +90,13 @@ export class AuthController {
   @Public()
   @Get('activate/:activationKey')
   @HttpCode(HttpStatus.OK)
-  async activate(@Param('activationKey') activationKey: string) {
+  async activate(
+    @Param('activationKey') activationKey: string,
+  ) {
     await this.authService.activate(activationKey);
     return {
-      message: 'activated'
-    }
+      message: 'activated',
+    };
   }
 
   @Public()
@@ -71,8 +105,26 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refreshTokens(
     @GetUser() user: User,
-    @GetToken() rtToken: string,
+    @GetRefreshToken() rtToken: string,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.refreshTokens(user.id, rtToken);
+    const tokens = await this.authService.refreshTokens(
+      user.id,
+      rtToken,
+    );
+    response.cookie('refreshToken', tokens.refresh_token, {
+      expires: new Date(
+        new Date().getTime() +
+          parseInt(
+            this.config.get(
+              'REFRESH_TOKEN_EXPIRE_TIME_MILLISECOND',
+            ),
+          ),
+      ),
+      sameSite: 'strict',
+      httpOnly: true,
+    });
+
+    return tokens.access_token;
   }
 }

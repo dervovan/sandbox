@@ -9,9 +9,15 @@ import * as argon from 'argon2';
 import strings from './strings.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { TokenData, Tokens, TokenType } from './types';
+import {
+  AuthResponse,
+  TokenData,
+  Tokens,
+  TokenType,
+} from './types';
 import { MailService } from 'src/mail/mail.service';
 import * as uuid from 'uuid';
+import { User } from '@prisma/client';
 
 @Injectable({})
 export class AuthService {
@@ -40,7 +46,7 @@ export class AuthService {
 
   private async _signupLogic(
     dto: SignUpDto,
-  ): Promise<Tokens> {
+  ): Promise<AuthResponse> {
     const hash = await argon.hash(dto.password);
     const activationKey = uuid.v4();
     this.mail.sendActivationMail(
@@ -52,10 +58,15 @@ export class AuthService {
         email: dto.email,
         passwordHash: hash,
         activationKey: activationKey,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
       },
       select: {
         id: true,
         email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
       },
     });
 
@@ -69,10 +80,13 @@ export class AuthService {
       tokens.refresh_token,
     );
 
-    return tokens;
+    return {
+      ...tokens,
+      ...user,
+    };
   }
 
-  async signup(dto: SignUpDto): Promise<Tokens> {
+  async signup(dto: SignUpDto): Promise<AuthResponse> {
     const existsEmail =
       await this.prismaService.user.findUnique({
         where: { email: dto.email },
@@ -87,7 +101,7 @@ export class AuthService {
     return this._signupLogic(dto);
   }
 
-  async signin(dto: SignInDto): Promise<Tokens> {
+  async signin(dto: SignInDto): Promise<AuthResponse> {
     const existedUser =
       await this.prismaService.user.findUnique({
         where: { email: dto.email },
@@ -96,6 +110,8 @@ export class AuthService {
           email: true,
           passwordHash: true,
           role: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
@@ -121,7 +137,13 @@ export class AuthService {
       existedUser.id,
       tokens.refresh_token,
     );
-    return tokens;
+
+    delete existedUser.passwordHash;
+
+    return {
+      ...tokens,
+      ...existedUser,
+    };
   }
 
   async logout(userId: number): Promise<void> {
