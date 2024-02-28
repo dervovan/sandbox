@@ -92,11 +92,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async activate(
     @Param('activationKey') activationKey: string,
+    @Res({ passthrough: true }) response: Response,
   ) {
     await this.authService.activate(activationKey);
-    return {
-      message: 'activated',
-    };
+    response.redirect(
+      `${this.config.get('CLIENT_URL')}/profile`,
+    );
   }
 
   @Public()

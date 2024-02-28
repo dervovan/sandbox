@@ -51,6 +51,7 @@ export class AuthService {
     const activationKey = uuid.v4();
     this.mail.sendActivationMail(
       dto.email,
+      dto.firstName,
       `${this.config.get('API_URL')}/auth/activate/${activationKey}`,
     );
     const user = await this.prismaService.user.create({
