@@ -38,7 +38,7 @@ export class MailService {
                     </td>
                   </tr>
                   <tr>
-                    <td style="text-align: center;">
+                    <td style="padding: 40px 105px;">
                       <table border="0" cellpadding="0" cellspacing="0">
                         <tbody>
                           <tr>
